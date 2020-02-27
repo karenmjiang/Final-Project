@@ -1,0 +1,32 @@
+---
+title: "Project Review"
+author: "Karen Jiang"
+date: "2/12/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Final Project Milestone 2
+
+Here we will review two projects from the past years, and discuss some of the pros and cons in their projects. I selected the projects based on my personal interest around health policy. The first project represents the example that did not need to do extensive data cleaning/gathering from a single data source (CMS), and the second one represents one where the data was integrated from multiple data sources.
+
+
+### [Medicare Share Savings Program](https://andres-deloera.shinyapps.io/ACO_Exploration/) 
+#### by Andres de Loera-Brust
+
+| Pros      | Cons |
+| ----------- | ----------- |
+| Variable definition were helpful to understand a technical dataset such as this one | Under Program Features tab, the default diagram is a scatter plot. However the X and Y variables are not all continuous, which creates some rather un-intuitive plots |
+| This project is very well suited for exploratory data analysis. | While the interactive nature of the shiny app is helpful, I think it would benefit to have some of the graphs display at the same time to aid with comparisons.|
+
+
+### [Visualization of effects of Medicaid Expansion on Immunization Rates](https://rqiu.shinyapps.io/Vaccine-Explorer/) 
+#### by Richard Qiu
+
+| Pros  | Cons |
+| ----------- | ----------- |
+| Animate factors was a clever way to show trends over time | Correlation =/= Causation, in terms of ACA increasing immunization rates |
+| Data gathering was well thought through, display / navigation was intuitive and easy to use. | Honestly, it was great job all around! |
+

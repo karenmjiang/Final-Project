@@ -1,0 +1,110 @@
+---
+title: "Extract Transform Load"
+author: "Karen Jiang"
+date: "2/26/2020"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(tidyverse)
+library(readr)
+```
+
+## Understanding the Data
+
+### Exploratory Data Analysis
+
+We are examining 3 datasets from CMS.
+
+* ACO general information
+* Beneficiaries information by ACO
+* Fee-for-Service Expenditures by ACO
+
+To better understand how MSSP scoring and classifications for ACOs, information can be found in the  [MSSP Shared Savings and Losses Assignement and Methodology ]("https://www.cms.gov/Medicare/Medicare-Fee-for-Service-Payment/sharedsavingsprogram/Downloads/Shared-Savings-Losses-Assignment-Spec-V7.pdf").
+
+
+```{r read_data, message=FALSE}
+
+# Read in .csv data
+
+aco <- 
+  read.csv("data/2018_Shared_Savings_Program__SSP__Accountable_Care_Organizations__ACO__PUF.csv") %>%
+  select(-contains("N_"), -contains("P_")) 
+
+beneficiaries <- 
+  read_csv("data/2018_Number_of_ACO_Assigned_Beneficiaries_by_County_PUF.csv")
+
+ffs <- 
+  read_csv("data/2018_County-level_FFS_Data_for_Shared_Savings_Program_Benchmark_PUF.csv")
+```
+
+
+### Exploratory Data Analysis
+```{r aco, message=FALSE}
+
+aco %>%
+  count(Agree_Type)
+
+
+tracks <- aco %>%
+  summarise(
+    sum(Initial_Track_1),
+    sum(Initial_Track_1_Plus),
+    sum(Initial_Track_2),
+    sum(Initial_Track_3),
+    sum(Current_Track_1),
+    sum(Current_Track_1_Plus),
+    sum(Current_Track_2),
+    sum(Current_Track_3)
+  ) %>%
+  gather(key = "Type", value = "Count") %>%
+  separate("Type", into = c("A", "Type", "C", "Track","E")) %>%
+  select(-A, -C) %>%
+  unite("Track", c("Track", "E"), sep = " ")
+  
+ggplot(tracks, aes(x = Track, y = Count, fill = Type)) + 
+  geom_col(position = "dodge") +
+  labs(
+    title = "Number of ACOs by Track",
+    subtitle = "between Initial and Current enrollment",
+    y = "# of ACOs"
+  )
+```
+```{r}
+# Generated Total Savings / Losses
+
+ggplot(aco, aes(x=GenSaveLoss, fill = Agree_Type)) + 
+  geom_density(alpha = 0.4) +
+  scale_x_continuous(labels = scales::comma) +
+  labs(
+    title = "Distribution of Generated Losses and Savings (in Dollars)",
+    x = "Generated Losses and Savings"
+  )
+
+ggplot(aco %>% filter(GenSaveLoss != 0), 
+       aes(x=GenSaveLoss, fill = Agree_Type)) + 
+  geom_density(alpha = 0.4) +
+  scale_x_continuous(labels = scales::comma) +
+  labs(
+    title = "Distribution of non-Zero Generated Losses and Savings (in Dollars)",
+    x = "Generated Losses and Savings"
+  ) + geom_vline(aes(xintercept = mean(GenSaveLoss, color = Agree_Type)))
+  
+```
+
+
+There are 4 types of beneficiaries that are categorized to account for risk adjustments:
+
+1. ESRD (End Stage Renal Disease)
+    Eligible for Medicare as a result of End Stage Renal Disease
+2. Disabled
+    Eligible for Medicare as a result of disability
+3. Aged/Dual
+    Eligible for Medicare by age (65+) and eligible for Medicaid
+4. Aged/Non-Dual
+    Eligible only for Medicare by age (65+)
+
+
