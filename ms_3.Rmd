@@ -1,5 +1,5 @@
 ---
-title: "Extract Transform Load"
+title: "Extract Transform Load - ACO"
 author: "Karen Jiang"
 date: "2/26/2020"
 output: html_document
@@ -11,19 +11,20 @@ knitr::opts_chunk$set(echo = FALSE)
 
 library(tidyverse)
 library(readr)
+library(readxl)
+library(gt)
 ```
 
-## Understanding the Data
-
-### Exploratory Data Analysis
+## Exploratory Data Analysis - Part 1
 
 We are examining 3 datasets from CMS.
 
-* ACO general information
+* **ACO general information**
 * Beneficiaries information by ACO
 * Fee-for-Service Expenditures by ACO
 
 To better understand how MSSP scoring and classifications for ACOs, information can be found in the  [MSSP Shared Savings and Losses Assignement and Methodology ]("https://www.cms.gov/Medicare/Medicare-Fee-for-Service-Payment/sharedsavingsprogram/Downloads/Shared-Savings-Losses-Assignment-Spec-V7.pdf").
+
 
 
 ```{r read_data, message=FALSE}
@@ -34,20 +35,45 @@ aco <-
   read.csv("data/2018_Shared_Savings_Program__SSP__Accountable_Care_Organizations__ACO__PUF.csv") %>%
   select(-contains("N_"), -contains("P_")) 
 
-beneficiaries <- 
-  read_csv("data/2018_Number_of_ACO_Assigned_Beneficiaries_by_County_PUF.csv")
+# Read in .xlsx data dictionary
 
-ffs <- 
-  read_csv("data/2018_County-level_FFS_Data_for_Shared_Savings_Program_Benchmark_PUF.csv")
+aco_dictionary <-
+  read_excel("data-dictionary/Dictionary.ACO.SSP.PUF.Y2018.xlsx",
+             sheet = "ACO PUF Dictionary 2018",
+             skip = 16,
+             col_names = TRUE)
+
 ```
 
+```{r functions}
+# Function to look in the dictionary and find the definition of a column. 
 
-### Exploratory Data Analysis
-```{r aco, echo=FALSE}
+find_definition_aco <- function(variable, col = c("short", "long", "type")) {
+  col <- match.arg(col)
+  aco_dictionary %>%
+    filter(Variable == variable) %>%
+    pull(
+      switch(col,
+         short = "Short Description",
+         long = "Long Description",
+         type = "Format/Values"))
+}
+```
+
+### Understanding the ACO dataset
+
+I wanted to look at how ACOs were distributed in terms of the ACO Track Type. For further information on the Track Types, [read here](http://www.physiciansadvocacyinstitute.org/Portals/0/assets/docs/Advanced-APM-Pathway/Medicare%20Shared%20Savings%20Program%20Overview.pdf).
+
+- Track 1 : One-sided risk
+- Track 1+ : Two-sided risk
+- Track 2 : Two-sided risk
+- Track 3 : Two-sided risk
+
+
+```{r aco, include = FALSE}
 
 aco %>%
   count(Agree_Type)
-
 
 tracks <- aco %>%
   summarise(
@@ -73,6 +99,8 @@ ggplot(tracks, aes(x = Track, y = Count, fill = Type)) +
     y = "# of ACOs"
   )
 ```
+
+
 ```{r}
 # Generated Total Savings / Losses
 
