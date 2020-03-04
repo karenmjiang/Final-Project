@@ -43,7 +43,7 @@ ffs <-
 
 
 ### Exploratory Data Analysis
-```{r aco, message=FALSE}
+```{r aco, echo=FALSE}
 
 aco %>%
   count(Agree_Type)
@@ -75,6 +75,12 @@ ggplot(tracks, aes(x = Track, y = Count, fill = Type)) +
 ```
 ```{r}
 # Generated Total Savings / Losses
+
+aco %>% select(GenSaveLoss) %>%
+  mutate(Amount = "Zero") %>%
+  mutate(Amount = ifelse(GenSaveLoss > 0, "Positive", Amount)) %>%
+  mutate(Amount = ifelse(GenSaveLoss < 0, "Negative", Amount)) %>%
+  count(Amount)
 
 ggplot(aco, aes(x=GenSaveLoss, fill = Agree_Type)) + 
   geom_density(alpha = 0.4) +
