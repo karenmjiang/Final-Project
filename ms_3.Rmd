@@ -46,6 +46,7 @@ aco_dictionary <-
 ```
 
 ```{r functions}
+
 # Function to look in the dictionary and find the definition of a column. 
 
 find_definition_aco <- function(variable, col = c("short", "long", "type")) {
@@ -104,11 +105,13 @@ ggplot(tracks, aes(x = Track, y = Count, fill = Type)) +
 ```{r}
 # Generated Total Savings / Losses
 
-aco %>% select(GenSaveLoss) %>%
+generate_pos_neg <-  aco %>% select(GenSaveLoss) %>%
   mutate(Amount = "Zero") %>%
   mutate(Amount = ifelse(GenSaveLoss > 0, "Positive", Amount)) %>%
   mutate(Amount = ifelse(GenSaveLoss < 0, "Negative", Amount)) %>%
   count(Amount)
+
+ggplot(generate_pos_neg, aes(x = Amount, y = n)) + geom_col()
 
 ggplot(aco, aes(x=GenSaveLoss, fill = Agree_Type)) + 
   geom_density(alpha = 0.4) +
