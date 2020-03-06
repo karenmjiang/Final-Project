@@ -11,11 +11,10 @@ knitr::opts_chunk$set(echo = FALSE)
 library(tidycensus)
 library(readr)
 library(readxl)
-library(gt)
-library(usmap)
 library(tidyverse)
-library(ggrepel)
 library(ggthemes)
+library(stringr)
+library(janitor)
 ```
 
 ## Exploratory Data Analysis - Part 2
@@ -26,23 +25,36 @@ library(ggthemes)
 
 To better understand how MSSP scoring and classifications for ACOs, information can be found in the  [MSSP Shared Savings and Losses Assignement and Methodology ]("https://www.cms.gov/Medicare/Medicare-Fee-for-Service-Payment/sharedsavingsprogram/Downloads/Shared-Savings-Losses-Assignment-Spec-V7.pdf").
 
+
+Our goal with the data is to understand:
+
+- How does ACOs saturation by state?
+- Within states, how are ACOs distributed by county?
+- How are person-years contributed to each state?
+- What are the risk scores by county?
+- Is there any correlation between risk scores and ACO saturation?
+
 ```{r read_data, include=FALSE}
 
 # GEODATA
 
 # Variable "B00001_001" is a county population estimate.
 
-census_api_key("6c3bf75163fa1ef1eb5aff46febb50bfb040b127")
+# census_api_key("6c3bf75163fa1ef1eb5aff46febb50bfb040b127")
 
 geo_data <- get_acs(geography = "county",
         variable = "B00001_001",
         year = 2018,
-        geometry = TRUE)
+        output = "wide",
+        geometry = TRUE) %>%
+  clean_names()
 
 # BENEFICIARIES DATA
 
 beneficiaries <- 
-  read_csv("data/2018_Number_of_ACO_Assigned_Beneficiaries_by_County_PUF.csv")
+  read_csv("data/2018_Number_of_ACO_Assigned_Beneficiaries_by_County_PUF.csv") %>%
+  clean_names() %>%
+  mutate(geoid = paste(state_id, county_id, sep=""))
 
 beneficiaries_dictionary <-
   read_excel("data-dictionary/Dictionary.ACO.SSP.COUNTY.ASSIGNED.PUF.2018.xlsx",
@@ -52,12 +64,17 @@ beneficiaries_dictionary <-
 # COUNTY FEE FOR SERVICE DATA
 
 ffs <- 
-  read_csv("data/2018_County-level_FFS_Data_for_Shared_Savings_Program_Benchmark_PUF.csv")
+  read_csv("data/2018_County-level_FFS_Data_for_Shared_Savings_Program_Benchmark_PUF.csv") %>%
+  clean_names() %>%
+  mutate(state_id = str_pad(state_id, width = 2,pad = "0"),
+         county_id = str_pad(county_id, width = 3, pad = "0")) %>%
+  mutate(geoid = paste(state_id, county_id, sep=""))
 
 ffs_dictionary <-
   read_excel("data-dictionary/Dictionary.ACO.SSP.COUNTYRATE.PUF.PY19.2018.xlsx",
              sheet = "Data Dictionary",
              col_names = TRUE)
+
 ```
 
 ```{r functions, include=FALSE}
@@ -95,20 +112,19 @@ find_definition_ffs <- function(variable, col = c("short","long","type")) {
 ### Understanding the Beneficiaries dataset
 
 #### Saturation
+
 ```{r}
-
 unique_acos <- length(unique(beneficiaries$`ACO ID`))
-
 ```
-There are `r unique_acos` unique ACOs in this dataset. 
+The goal of the MSSP program is to encourage greater adoption of ACOs as alternative payment models. Here, we will explore the saturation of ACOs in the US by state and by county. There are `r unique_acos` unique ACOs in this dataset. 
 
 ```{r aco_state}
 num_acos_by_state <- beneficiaries %>% 
-  group_by(`State name`) %>%
-  count(`ACO ID`) %>%
-  count(`State name`)
+  group_by(state_name) %>%
+  count(aco_id) %>%
+  count(state_name)
 
-ggplot(num_acos_by_state, aes(y= reorder(`State name`, n), x=n)) + 
+ggplot(num_acos_by_state, aes(y= reorder(state_name, n), x=n)) + 
   geom_text(aes(label = n, size = "12")) + 
   theme_classic() +
   theme(
@@ -127,18 +143,14 @@ ggplot(num_acos_by_state, aes(y= reorder(`State name`, n), x=n)) +
 If we look within a State, say Massachusetts, ACOs may also be unevenly distributed within between counties.
 
 ```{r geo_state}
-beneficiaries <- beneficiaries %>%
-  mutate(`Total assigned beneficiaries` = na_if(x = beneficiaries$`Total assigned beneficiaries`, y = "*"))
 
-geo_beneficiares <- beneficiaries %>%
-  mutate(GEOID = paste(`State ID`, `County ID`, sep = "")) %>%
-  right_join(geo_data, by = "GEOID") 
+geo_ffs <- ffs %>% 
+  inner_join(geo_data, by = "geoid")
 
-geo_data %>%
-  ggplot() +
-  geom_sf()
-
-
+# geo_ffs %>% 
+#   filter(state_name == "Alaska") %>%
+#   ggplot(aes(geometry = geometry, fill = b00001_001e)) +
+#   geom_sf()
 ```
 
 
@@ -147,7 +159,7 @@ We can first choose to look at the total number of assigned beneficiaries per co
 What proportion of counties have less than 10 Total Assigned Beneficiaries? 
 ```{r}
 beneficiaries %>%
-  filter(`Total assigned beneficiaries` == "*") %>%
+  filter(total_assigned_beneficiaries == "*") %>%
   length()
 ```
 
