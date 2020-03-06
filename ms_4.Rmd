@@ -13,13 +13,15 @@ library(readr)
 library(readxl)
 library(gt)
 library(usmap)
+library(tidyverse)
+library(ggrepel)
 ```
 
 ## Exploratory Data Analysis - Part 2
 
 * ACO general information
 * **Beneficiaries information by ACO**
-* Fee-for-Service Expenditures by ACO
+* **Fee-for-Service Expenditures by County**
 
 To better understand how MSSP scoring and classifications for ACOs, information can be found in the  [MSSP Shared Savings and Losses Assignement and Methodology ]("https://www.cms.gov/Medicare/Medicare-Fee-for-Service-Payment/sharedsavingsprogram/Downloads/Shared-Savings-Losses-Assignment-Spec-V7.pdf").
 
@@ -64,7 +66,7 @@ find_definition_beneficiaries <- function(variable, col = c("short", "long", "ty
 }
 
 #Example: 
-find_definition_beneficiaries(Tot_AB, "type")
+
 
 find_definition_ffs <- function(variable, col = c("short","long","type")) {
   col <- match.arg(col)
@@ -78,15 +80,39 @@ find_definition_ffs <- function(variable, col = c("short","long","type")) {
 }
 
 # Example: 
-# find_definition_ffs("County_ID", "long")
+find_definition_ffs("County_ID", "long")
 ```
 
 
 ### Understanding the Beneficiaries dataset
 
+#### Saturation
 ```{r}
 
+unique_acos <- length(unique(beneficiaries$`ACO ID`))
 
-plot_usmap(data = beneficiaries, regions = "counties")
+num_acos_by_state <- beneficiaries %>% 
+  group_by(`State name`) %>%
+  count(`ACO ID`) %>%
+  count(`State name`)
+
+ggplot(num_acos_by_state, aes(y= reorder(`State name`, n), x=n)) + 
+  geom_text(aes(label = n, check_overlap = TRUE)) + 
+  theme_classic() 
+```
+There are `r unique_acos` unique ACOs in this dataset. 
+These ACOs 
+
+
+
+Which 
+
+We can first choose to look at the total number of assigned beneficiaries per county. The values for this dataset are: `r find_definition_beneficiaries("Tot_AB", "type")`
+
+What proportion of counties have less than 10 Total Assigned Beneficiaries? 
+```{r}
+beneficiaries %>%
+  filter(`Total assigned beneficiaries` == "*") %>%
+  length()
 ```
 
