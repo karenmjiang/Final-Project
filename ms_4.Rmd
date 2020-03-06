@@ -15,6 +15,7 @@ library(gt)
 library(usmap)
 library(tidyverse)
 library(ggrepel)
+library(ggthemes)
 ```
 
 ## Exploratory Data Analysis - Part 2
@@ -25,9 +26,20 @@ library(ggrepel)
 
 To better understand how MSSP scoring and classifications for ACOs, information can be found in the  [MSSP Shared Savings and Losses Assignement and Methodology ]("https://www.cms.gov/Medicare/Medicare-Fee-for-Service-Payment/sharedsavingsprogram/Downloads/Shared-Savings-Losses-Assignment-Spec-V7.pdf").
 
-```{r read_data}
+```{r read_data, include=FALSE}
 
-# Beneficiaries
+# GEODATA
+
+# Variable "B00001_001" is a county population estimate.
+
+census_api_key("6c3bf75163fa1ef1eb5aff46febb50bfb040b127")
+
+geo_data <- get_acs(geography = "county",
+        variable = "B00001_001",
+        year = 2018,
+        geometry = TRUE)
+
+# BENEFICIARIES DATA
 
 beneficiaries <- 
   read_csv("data/2018_Number_of_ACO_Assigned_Beneficiaries_by_County_PUF.csv")
@@ -37,9 +49,7 @@ beneficiaries_dictionary <-
              sheet = "Data Dictionary",
              col_names = TRUE)
 
-beneficiaries_dictionary
-
-# Fee for Service
+# COUNTY FEE FOR SERVICE DATA
 
 ffs <- 
   read_csv("data/2018_County-level_FFS_Data_for_Shared_Savings_Program_Benchmark_PUF.csv")
@@ -48,11 +58,11 @@ ffs_dictionary <-
   read_excel("data-dictionary/Dictionary.ACO.SSP.COUNTYRATE.PUF.PY19.2018.xlsx",
              sheet = "Data Dictionary",
              col_names = TRUE)
-
-head(ffs_dictionary)
 ```
 
-```{r functions}
+```{r functions, include=FALSE}
+
+# Helper functions to quickly call on the variable definitions.
 
 find_definition_beneficiaries <- function(variable, col = c("short", "long", "type")) {
   col <- match.arg(col)
@@ -64,8 +74,6 @@ find_definition_beneficiaries <- function(variable, col = c("short", "long", "ty
          long = "Long Description",
          type = "Missing or Suppressed Values"))
 }
-
-#Example: 
 
 
 find_definition_ffs <- function(variable, col = c("short","long","type")) {
@@ -80,7 +88,7 @@ find_definition_ffs <- function(variable, col = c("short","long","type")) {
 }
 
 # Example: 
-find_definition_ffs("County_ID", "long")
+# find_definition_ffs("County_ID", "long")
 ```
 
 
@@ -91,21 +99,48 @@ find_definition_ffs("County_ID", "long")
 
 unique_acos <- length(unique(beneficiaries$`ACO ID`))
 
+```
+There are `r unique_acos` unique ACOs in this dataset. 
+
+```{r aco_state}
 num_acos_by_state <- beneficiaries %>% 
   group_by(`State name`) %>%
   count(`ACO ID`) %>%
   count(`State name`)
 
 ggplot(num_acos_by_state, aes(y= reorder(`State name`, n), x=n)) + 
-  geom_text(aes(label = n, check_overlap = TRUE)) + 
-  theme_classic() 
+  geom_text(aes(label = n, size = "12")) + 
+  theme_classic() +
+  theme(
+    axis.ticks = element_blank(),
+    aspect.ratio = 2.5,
+    axis.line.x.bottom = element_blank(),
+    axis.text.x.bottom = element_blank(),
+    legend.position = "none"
+  ) +
+  labs(
+    x = "Number of ACOs",
+    y = "US States and Territories"
+  )
+
 ```
-There are `r unique_acos` unique ACOs in this dataset. 
-These ACOs 
+If we look within a State, say Massachusetts, ACOs may also be unevenly distributed within between counties.
+
+```{r geo_state}
+beneficiaries <- beneficiaries %>%
+  mutate(`Total assigned beneficiaries` = na_if(x = beneficiaries$`Total assigned beneficiaries`, y = "*"))
+
+geo_beneficiares <- beneficiaries %>%
+  mutate(GEOID = paste(`State ID`, `County ID`, sep = "")) %>%
+  right_join(geo_data, by = "GEOID") 
+
+geo_data %>%
+  ggplot() +
+  geom_sf()
 
 
+```
 
-Which 
 
 We can first choose to look at the total number of assigned beneficiaries per county. The values for this dataset are: `r find_definition_beneficiaries("Tot_AB", "type")`
 
