@@ -13,6 +13,7 @@ library(tidyverse)
 library(readr)
 library(readxl)
 library(gt)
+library(purrr)
 ```
 
 ## Exploratory Data Analysis - Part 1
@@ -33,7 +34,18 @@ To better understand how MSSP scoring and classifications for ACOs, information 
 
 aco <- 
   read.csv("data/2018_Shared_Savings_Program__SSP__Accountable_Care_Organizations__ACO__PUF.csv") %>%
-  select(-contains("N_"), -contains("P_")) 
+  
+  # In order to reduce the amount of data we're working with, I'm removing some
+  # of the more detailed aspects of the dataset.
+  
+  select(-contains("N_"), -contains("P_")) %>%
+  
+  # Turns string ACO_State into a list object
+
+  mutate(ACO_State = map(ACO_State, 
+                         ~ unlist(str_split(.x, ", ")))) %>%
+  mutate(num_states = map(ACO_State, length),
+         num_states = as.integer(num_states))
 
 # Read in .xlsx data dictionary
 
@@ -44,6 +56,7 @@ aco_dictionary <-
              col_names = TRUE)
 
 ```
+
 
 ```{r functions}
 
@@ -98,7 +111,8 @@ ggplot(tracks, aes(x = Track, y = Count, fill = Type)) +
     title = "Number of ACOs by Track",
     subtitle = "between Initial and Current enrollment",
     y = "# of ACOs"
-  )
+  ) +
+  theme_classic()
 ```
 
 
@@ -130,6 +144,55 @@ ggplot(aco %>% filter(GenSaveLoss != 0),
     x = "Generated Losses and Savings"
   ) + geom_vline(aes(xintercept = mean(GenSaveLoss, color = Agree_Type)))
   
+```
+
+### How many states does a single ACO operate in?
+
+As you can see, a single ACO can operate in multiple states. Here we try to explore the variation of states each ACO operates in. 
+
+```{r}
+
+aco %>%
+  select(ACO_State, ACO_ID, Agree_Type)
+  head(10)
+
+aco %>% 
+  count(num_states, Agree_Type) %>%
+  ggplot(aes(x = as.factor(num_states), y = n, fill = Agree_Type)) +
+  geom_col(position = "dodge") +
+  geom_text(aes(x = num_states, y = n, label = n, color = Agree_Type), position = position_dodge(width = 1), vjust = -0.5, size = 3, show.legend = F) + 
+  labs(
+    title = "In how many states does a single ACO operate?",
+    subtitle = "There are no ACOs in their Renewal agreement that operate in more than 4 states",
+    x = "Number of States",
+    fill = "Agreement Type"
+  ) +
+  theme_classic() +
+  theme(
+    axis.title.y = element_blank(),
+    axis.line.y = element_blank(),
+    axis.ticks = element_blank(),
+    axis.text.y = element_blank(),
+    legend.position = "top"
+  )
+```
+
+
+Who are ACOs that are operating in more than 5 states? Which states are those?
+
+```{r}
+large_acos <- aco %>%
+  filter(num_states > 4) %>%
+  select(ACO_State)
+
+us_states <- map_data("state")
+state = data.frame(
+  Abbreviation = state.abb,
+  Division = state.division,
+  Name = state.name,
+  Region = state.region
+)
+
 ```
 
 

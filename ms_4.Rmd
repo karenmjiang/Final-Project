@@ -15,6 +15,7 @@ library(tidyverse)
 library(ggthemes)
 library(stringr)
 library(janitor)
+library(sf)
 ```
 
 ## Exploratory Data Analysis - Part 2
@@ -43,11 +44,12 @@ Our goal with the data is to understand:
 # census_api_key("6c3bf75163fa1ef1eb5aff46febb50bfb040b127")
 
 geo_data <- get_acs(geography = "county",
-        variable = "B00001_001",
-        year = 2018,
-        output = "wide",
-        geometry = TRUE) %>%
-  clean_names()
+                  variables = "B19013_001", 
+                  year = 2018,
+                  geometry = TRUE) %>%
+  separate(NAME, into = c("County", "State"), ", ") %>%
+  mutate(County = str_remove(string = County, pattern = "County"))
+
 
 # BENEFICIARIES DATA
 
@@ -144,8 +146,24 @@ If we look within a State, say Massachusetts, ACOs may also be unevenly distribu
 
 ```{r geo_state}
 
-geo_ffs <- ffs %>% 
-  inner_join(geo_data, by = "geoid")
+ffs %>%
+  group_by(state_name) %>%
+  count(state_name)
+
+cali_data <- geo_data %>% right_join(ffs, by = c("State" = "state_name", "County" = "county_name")) %>% filter(State == "California") %>%
+  mutate(aged_non_dual_person_years = as.numeric(aged_non_dual_person_years))
+
+cali_data %>%
+  ggplot() +
+  geom_sf() +
+  scale_fill_viridis_c(option = "plasma",
+                       direction = -1)
+
+
+nebraska <- income %>%
+  filter(State == "Nebraska")
+
+ggplot(nebraska, aes(fill = estimate)) + geom_sf()
 
 # geo_ffs %>% 
 #   filter(state_name == "Alaska") %>%
