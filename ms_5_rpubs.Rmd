@@ -1,0 +1,42 @@
+---
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(tidyverse)
+library(readr)
+```
+
+```{r}
+# Read in .csv data
+
+aco <- 
+  read.csv("data/2018_Shared_Savings_Program__SSP__Accountable_Care_Organizations__ACO__PUF.csv") %>%
+  mutate(ACO_State = map(ACO_State, 
+                         ~ unlist(str_split(.x, ", ")))) %>%
+  mutate(num_states = map(ACO_State, length),
+         num_states = as.integer(num_states)) 
+
+aco %>% 
+  count(num_states, Agree_Type) %>%
+  ggplot(aes(x = as.factor(num_states), y = n, fill = Agree_Type)) +
+  geom_col(position = "dodge") +
+  geom_text(aes(x = num_states, y = n, label = n, color = Agree_Type), position = position_dodge(width = 1), vjust = -0.5, size = 3, show.legend = F) + 
+  labs(
+    title = "In how many states does a single ACO operate?",
+    subtitle = "There are no ACOs in their Renewal agreement that operate in more than 4 states",
+    x = "Number of States",
+    fill = "Agreement Type"
+  ) +
+  theme_classic() +
+  theme(
+    axis.title.y = element_blank(),
+    axis.line.y = element_blank(),
+    axis.ticks = element_blank(),
+    axis.text.y = element_blank(),
+    legend.position = "top"
+  )
+```
+

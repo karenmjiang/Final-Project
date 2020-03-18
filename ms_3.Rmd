@@ -186,6 +186,7 @@ large_acos <- aco %>%
   select(ACO_State)
 
 us_states <- map_data("state")
+
 state = data.frame(
   Abbreviation = state.abb,
   Division = state.division,
