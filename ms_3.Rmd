@@ -55,6 +55,14 @@ aco_dictionary <-
              skip = 16,
              col_names = TRUE)
 
+
+state = data.frame(
+  Abbreviation = state.abb,
+  Division = state.division,
+  Name = state.name,
+  Region = state.region
+)
+
 ```
 
 
@@ -153,7 +161,7 @@ As you can see, a single ACO can operate in multiple states. Here we try to expl
 ```{r}
 
 aco %>%
-  select(ACO_State, ACO_ID, Agree_Type)
+  select(ACO_State, ACO_ID, Agree_Type) %>%
   head(10)
 
 aco %>% 
@@ -177,25 +185,69 @@ aco %>%
   )
 ```
 
+#### Multi-state ACOs
 
 Who are ACOs that are operating in more than 5 states? Which states are those?
 
 ```{r}
 large_acos <- aco %>%
   filter(num_states > 4) %>%
-  select(ACO_State)
+  select(ACO_State, ACO_Name)
 
-us_states <- map_data("state")
+large_acos
 
-state = data.frame(
-  Abbreviation = state.abb,
-  Division = state.division,
-  Name = state.name,
-  Region = state.region
-)
+choose_aco <- function(index = c(1:11)){
+  unlist(large_acos[index,"ACO_State"])
+}
 
+choose_aco(4)
+
+library(usmap)
+
+plots <- map(1:11, ~plot_usmap(include = choose_aco(.x)) +
+      labs(
+        title = "Locations of multi-state ACOs",
+        subtitle = large_acos[.x, "ACO_Name"]
+      ))
+
+walk(plots, print)
 ```
 
+
+#### Single-state ACOs
+
+
+```{r}
+single_aco <- aco %>%
+  filter(num_states == 1) %>%
+  mutate(ACO_State = unlist(ACO_State)) %>%
+  group_by(Agree_Type) %>%
+  count(ACO_State) %>%
+  mutate(state = ACO_State)
+
+initial_single_aco <- single_aco %>%
+  filter(Agree_Type == "Initial")
+
+renewal_single_aco <- single_aco %>%
+  filter(Agree_Type == "Renewal")
+
+plot_usmap(data = initial_single_aco, values = "n", color = "red") + 
+  labs(
+    title = "Single-state ACOs locations",
+    subtitle = "Initial Agreement Type"
+  ) +
+  scale_fill_continuous(name = "Number of Single-state ACOs", low = "white", high = "red") + 
+  theme(legend.position = "right")
+
+plot_usmap(data = renewal_single_aco, values = "n", color = "red") + 
+  labs(
+    title = "Single-state ACOs locations",
+    subtitle = "Renewal Agreement Type"
+  ) +
+  scale_fill_continuous(name = "Number of Single-state ACOs", low = "white", high = "red") + 
+  theme(legend.position = "right")
+
+```
 
 There are 4 types of beneficiaries that are categorized to account for risk adjustments:
 
