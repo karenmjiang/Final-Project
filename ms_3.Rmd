@@ -233,31 +233,73 @@ renewal_single_aco <- single_aco %>%
 
 plot_usmap(data = initial_single_aco, values = "n", color = "red") + 
   labs(
-    title = "Single-state ACOs locations",
-    subtitle = "Initial Agreement Type"
+    title = "Initial Agreement Type"
   ) +
   scale_fill_continuous(name = "Number of Single-state ACOs", low = "white", high = "red") + 
   theme(legend.position = "right")
+```
 
+
+```{r}
+
+library(ggalt)
+wide <- single_aco %>% select(-ACO_State) %>%
+  pivot_wider(id_cols = "state", names_from = "Agree_Type", values_from = "n")
+
+ggplot(wide, aes(x = Initial, xend = Renewal, y = reorder(state, Initial), group = state)) + geom_dumbbell(
+  colour_x = "orange",
+  colour_xend = "skyblue",
+  dot_guide_colour = "white",
+  size = 0.75,
+  show.legend = TRUE
+) + theme_classic() +
+  labs(
+    x = NULL,
+    y = NULL
+  )
+```
+
+```{r}
 plot_usmap(data = renewal_single_aco, values = "n", color = "red") + 
   labs(
-    title = "Single-state ACOs locations",
-    subtitle = "Renewal Agreement Type"
+    title = "Renewal Agreement Type"
   ) +
   scale_fill_continuous(name = "Number of Single-state ACOs", low = "white", high = "red") + 
   theme(legend.position = "right")
 
 ```
 
-There are 4 types of beneficiaries that are categorized to account for risk adjustments:
 
-1. ESRD (End Stage Renal Disease)
-    Eligible for Medicare as a result of End Stage Renal Disease
-2. Disabled
-    Eligible for Medicare as a result of disability
-3. Aged/Dual
-    Eligible for Medicare by age (65+) and eligible for Medicaid
-4. Aged/Non-Dual
-    Eligible only for Medicare by age (65+)
+## Current vs. Initial Tracks
+
+```{r}
+tracks <- aco %>%
+  select(ACO_ID, Agree_Type, Current_Track_1, Current_Track_1_Plus, Current_Track_2, Current_Track_3, Initial_Track_1, Initial_Track_1_Plus, Initial_Track_2, Initial_Track_3) %>%
+  gather(current, flag, Current_Track_1:Current_Track_3) %>%
+  filter(flag == 1) %>%
+  select(-flag) %>%
+  gather(initial, flag2, Initial_Track_1:Initial_Track_3) %>%
+  filter(flag2 == 1) %>%
+  select(-flag2)
+
+tracks <- tracks %>%
+  mutate(current = sub("Current_", "", current),
+         current = as.factor(sub("_", " ", current)),
+         initial = sub("Initial_", "", initial),
+         initial = as.factor(sub("_", " ", initial))) %>%
+  group_by(current, initial, Agree_Type) %>%
+  count(current, initial)
+```
+
+
+```{r, message = FALSE, fig.height= 5}
+library(ggalluvial)
+
+ggplot(tracks, aes(axis1 = initial, axis2 = current, y = n)) + geom_alluvium(aes(fill = current)) +
+  geom_stratum(width = 0.4) +
+  geom_text(stat = "stratum",
+            infer.label = TRUE) +
+  theme_minimal() 
+```
 
 
