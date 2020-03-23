@@ -16,7 +16,7 @@ library(gt)
 library(purrr)
 ```
 
-## Exploratory Data Analysis - Part 1
+## ACO Dataset
 
 We are examining 3 datasets from CMS.
 
@@ -24,8 +24,9 @@ We are examining 3 datasets from CMS.
 * Beneficiaries information by ACO
 * Fee-for-Service Expenditures by ACO
 
-To better understand how MSSP scoring and classifications for ACOs, information can be found in the  [MSSP Shared Savings and Losses Assignement and Methodology ]("https://www.cms.gov/Medicare/Medicare-Fee-for-Service-Payment/sharedsavingsprogram/Downloads/Shared-Savings-Losses-Assignment-Spec-V7.pdf").
+This dataset provides information about the ACO and information around their performance for 2018. Each row (observation), is a single ACO.
 
+To better understand how MSSP scoring and classifications for ACOs, information can be found in the  [MSSP Shared Savings and Losses Assignement and Methodology ]("https://www.cms.gov/Medicare/Medicare-Fee-for-Service-Payment/sharedsavingsprogram/Downloads/Shared-Savings-Losses-Assignment-Spec-V7.pdf").
 
 
 ```{r read_data, message=FALSE}
@@ -65,7 +66,6 @@ state = data.frame(
 
 ```
 
-
 ```{r functions}
 
 # Function to look in the dictionary and find the definition of a column. 
@@ -82,17 +82,26 @@ find_definition_aco <- function(variable, col = c("short", "long", "type")) {
 }
 ```
 
-### Understanding the ACO dataset
+###  Tracks
 
-I wanted to look at how ACOs were distributed in terms of the ACO Track Type. For further information on the Track Types, [read here](http://www.physiciansadvocacyinstitute.org/Portals/0/assets/docs/Advanced-APM-Pathway/Medicare%20Shared%20Savings%20Program%20Overview.pdf).
+In 2018, there were four Tracks that an ACO could choose to follow. 
 
 - Track 1 : One-sided risk
 - Track 1+ : Two-sided risk
 - Track 2 : Two-sided risk
 - Track 3 : Two-sided risk
 
+One-sided risk means that the ACO may benefit from potential savings but will not be penalized over the losses. Two-sided risk means
 
-```{r aco, include = FALSE}
+Beneficiary assignment is the way CMS attributes patients who may see multiple providers in different ACOs based on their use of primary care services. 
+
+Tracks 1 and 2 used **retrospective** beneficiary assignment. Retrospective assignment means that patients are attributed to a provider at the end of the year, based on actual utilization data.
+
+Tracks 1+ and 3 used **prospective** beneficiary assignment. Prospective assignment means that patients are assigned to an ACO at the beginning of the year based on prior year's data. For providers, this may be helpful to know which patients they are responsible for improved population management.
+
+For further information on the Track Types, [read here](https://www.cms.gov/Medicare/Medicare-Fee-for-Service-Payment/sharedsavingsprogram/Downloads/Shared-Savings-Losses-Assignment-Spec-V6.pdf) for the CMS MSSP Methodology.
+
+```{r aco}
 
 aco %>%
   count(Agree_Type)
@@ -122,10 +131,45 @@ ggplot(tracks, aes(x = Track, y = Count, fill = Type)) +
   ) +
   theme_classic()
 ```
+Not surprisingly, we see that the majority of ACOs operate within Track 1, which is less risky than the other 3 tracks.
 
+However, a small portion of ACOs that Initially started in Track one are gradually moving to Track 1 Plus and Track 3. This may be due to the prospective beneficiary assignment. 
+
+
+```{r, message = FALSE}
+tracks <- aco %>%
+  select(ACO_ID, Agree_Type, QualScore, Current_Track_1, Current_Track_1_Plus, Current_Track_2, Current_Track_3, Initial_Track_1, Initial_Track_1_Plus, Initial_Track_2, Initial_Track_3) %>%
+  gather(current, flag, Current_Track_1:Current_Track_3) %>%
+  filter(flag == 1) %>%
+  select(-flag) %>%
+  gather(initial, flag2, Initial_Track_1:Initial_Track_3) %>%
+  filter(flag2 == 1) %>%
+  select(-flag2)
+
+tracks <- tracks %>%
+  mutate(current = sub("Current_", "", current),
+         current = as.factor(sub("_", " ", current)),
+         initial = sub("Initial_", "", initial),
+         initial = as.factor(sub("_", " ", initial))) %>%
+  group_by(current, initial, Agree_Type) %>%
+  count(current, initial)
+```
+
+We can try to look at the flow from the initial distribution of tracks to the current tracks through this alluvial diagram. 
+
+```{r, message = FALSE}
+library(ggalluvial)
+
+ggplot(tracks, aes(axis1 = initial, axis2 = current, y = n)) + geom_alluvium(aes(fill = current)) +
+  geom_stratum(width = 0.4) +
+  geom_text(stat = "stratum",
+            infer.label = TRUE) +
+  theme_minimal() 
+```
+
+## Generated Total Savings / Losses
 
 ```{r}
-# Generated Total Savings / Losses
 
 generate_pos_neg <-  aco %>% select(GenSaveLoss) %>%
   mutate(Amount = "Zero") %>%
@@ -270,36 +314,80 @@ plot_usmap(data = renewal_single_aco, values = "n", color = "red") +
 ```
 
 
-## Current vs. Initial Tracks
+Observations:
+
+- Track two is not very popular
+- Most ACOs stay in Track 1
+- Those who move from Track 1 go to Track 1+ or Track 3
+
+
+
+## Quality Performance Standard (QPS)
+
+For the 2018 performance year, any ACO that did not completely report quality data did not meet the quality performance standard. 
+ 
+An ACO must meet the quality performance standard to be eligible to share in any savings generated.
+
+In 2018, only 2 ACOs did not meet QPS Standard.
+
+ 
+```{r}
+qps <- aco %>%
+  count(Met_QPS)
+
+qps
+
+aco %>% filter(Met_QPS == 0) %>%
+  select(ACO_Name, QualScore)
+```
+
+
+## Quality score: 
+
+In Performance Year 1 of an ACO’s first agreement period, the quality score is 100% if all measures were completely reported and less than 100% if one or more measures were not completely reported. 
+
+Beyond Performance Year 1 of an ACO’s first agreement period, the quality score will be determined not only by whether all measures were completely reported but also on their performance against established benchmarks and on quality improvement. 
 
 ```{r}
-tracks <- aco %>%
-  select(ACO_ID, Agree_Type, Current_Track_1, Current_Track_1_Plus, Current_Track_2, Current_Track_3, Initial_Track_1, Initial_Track_1_Plus, Initial_Track_2, Initial_Track_3) %>%
+
+qps_score <- aco %>%
+  select(ACO_ID, Agree_Type, QualScore, Initial_Start_Date, Current_Track_1, Current_Track_1_Plus, Current_Track_2, Current_Track_3, Initial_Track_1, Initial_Track_1_Plus, Initial_Track_2, Initial_Track_3) %>%
   gather(current, flag, Current_Track_1:Current_Track_3) %>%
   filter(flag == 1) %>%
   select(-flag) %>%
   gather(initial, flag2, Initial_Track_1:Initial_Track_3) %>%
   filter(flag2 == 1) %>%
-  select(-flag2)
+  select(-flag2) %>%
+  mutate(
+    Initial_Start_Date = as.Date(Initial_Start_Date, format = "%m/%d/%Y"),
+    Initial_Start_Year = as.factor(format(Initial_Start_Date, "%Y"))
+  ) 
 
-tracks <- tracks %>%
-  mutate(current = sub("Current_", "", current),
-         current = as.factor(sub("_", " ", current)),
-         initial = sub("Initial_", "", initial),
-         initial = as.factor(sub("_", " ", initial))) %>%
-  group_by(current, initial, Agree_Type) %>%
-  count(current, initial)
+avg_QualScore <- qps_score %>%
+  filter(Initial_Start_Year != "2017" | Initial_Start_Year != "2018") %>%
+  summarize(avg_QualScore = mean(QualScore)) %>%
+  unlist()
+
+qps_score %>% head(5)
+
+ggplot(qps_score, aes(x = QualScore)) + 
+  geom_density(aes(fill = Initial_Start_Year), alpha = 0.2) +
+  geom_vline(xintercept = avg_QualScore,) +
+  geom_text(aes(x = avg_QualScore, y = 10, label = "Average Quality Score (Initial Start before 2017)"), angle = 90, vjust = -1.5, text = element_text(size = 8)) +
+  theme_classic() +
+  labs(
+    title = "Quality Score Distributions by ACOs Initial Start Year",
+    subtitle = "with the average Quality Score for ACOs that started prior to 2017"
+  )
+
 ```
 
+As we see in the graph, quality for those who started in 2017 and 2018 (within their first year), the quality scores are often higher, since the score is primarily around completion of reporting. 
 
-```{r, message = FALSE, fig.height= 5}
-library(ggalluvial)
+After this artificial spike, we can see that the quality scores average
 
-ggplot(tracks, aes(axis1 = initial, axis2 = current, y = n)) + geom_alluvium(aes(fill = current)) +
-  geom_stratum(width = 0.4) +
-  geom_text(stat = "stratum",
-            infer.label = TRUE) +
-  theme_minimal() 
-```
+
+
+
 
 
