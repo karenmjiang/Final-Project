@@ -373,7 +373,7 @@ qps_score %>% head(5)
 ggplot(qps_score, aes(x = QualScore)) + 
   geom_density(aes(fill = Initial_Start_Year), alpha = 0.2) +
   geom_vline(xintercept = avg_QualScore,) +
-  geom_text(aes(x = avg_QualScore, y = 10, label = "Average Quality Score (Initial Start before 2017)"), angle = 90, vjust = -1.5, text = element_text(size = 8)) +
+  geom_text(aes(x = avg_QualScore, y = 15, label = round(avg_QualScore,3)), vjust = 0, text = element_text(size = 8)) +
   theme_classic() +
   labs(
     title = "Quality Score Distributions by ACOs Initial Start Year",
