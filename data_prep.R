@@ -79,6 +79,7 @@ aco <-
   )
 
 saveRDS(aco, file = "clean_data/aco.RDS")
+saveRDS(aco, file = "about/data/aco.RDS")
 
 
 # County Dataset ----------------------------------------------------------
@@ -114,14 +115,8 @@ county <-
   ) %>%
   
   # Re-order column names
-  select(everything(), Beneficiary, Category, Value, -Names)
+  select(-Names)
 
-saveRDS(aco, file = "clean_data/county.RDS")
-
-# Assigned Beneficiary Dataset --------------------------------------------
-
-ab <-
-  read.csv(
-    "data/2018_Number_of_ACO_Assigned_Beneficiaries_by_County_PUF.csv"
-  )
+saveRDS(county, file = "clean_data/county.RDS")
+saveRDS(county, file = "about/data/county.RDS")
 

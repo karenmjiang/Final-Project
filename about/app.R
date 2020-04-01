@@ -3,39 +3,8 @@ library(ggplot2)
 library(readr)
 library(tidyverse)
 
-aco <-
-    read.csv(
-        "data/2018_Shared_Savings_Program__SSP__Accountable_Care_Organizations__ACO__PUF.csv"
-    ) %>%
-    select(
-        ACO_ID,
-        Initial_Start_Date,
-        Agree_Type,
-        ACO_State,
-        QualScore,
-        Current_Track_1,
-        Current_Track_1_Plus,
-        Current_Track_2,
-        Current_Track_3,
-        Initial_Track_1,
-        Initial_Track_1_Plus,
-        Initial_Track_2,
-        Initial_Track_3
-    ) %>%
-    mutate(ACO_State = map(ACO_State,
-                           ~ unlist(str_split(.x, ", ")))) %>%
-    mutate(num_states = map(ACO_State, length),
-           num_states = as.integer(num_states)) %>%
-    gather(current, flag, Current_Track_1:Current_Track_3) %>%
-    filter(flag == 1) %>%
-    select(-flag) %>%
-    gather(initial, flag2, Initial_Track_1:Initial_Track_3) %>%
-    filter(flag2 == 1) %>%
-    select(-flag2) %>%
-    mutate(
-        Initial_Start_Date = as.Date(Initial_Start_Date, format = "%m/%d/%Y"),
-        Initial_Start_Year = as.factor(format(Initial_Start_Date, "%Y"))
-    ) 
+aco <- readRDS(file = "data/aco.RDS")
+county <- readRDS(file = "data/county.RDS")
 
 # Define UI for application that draws a histogram
 ui <- navbarPage(
