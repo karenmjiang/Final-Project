@@ -1,0 +1,56 @@
+---
+title: "Exploratory Data Analysis"
+author: "Karen Jiang"
+date: "4/1/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(ggplot2)
+library(usmap)
+```
+
+```{r}
+aco <- readRDS("clean_data/aco.RDS")
+county <- readRDS("clean_data/county.RDS")
+```
+
+```{r}
+head(aco)
+
+p <- aco %>%
+  ggplot(aes(x = N_AB, y = N_AB_Year_PY)) + 
+  geom_point(alpha = 0.4)
+
+p
+```
+
+
+```{r}
+length(unique(county$county_name))
+
+county %>%
+  filter(Beneficiary == "End Stage Renal Disease") %>%
+  filter(Category == "Person Years")
+```
+
+
+```{r}
+d <- county %>%
+  filter(Beneficiary == "End Stage Renal Disease") %>%
+  filter(Category == "Person Years")
+
+plot_usmap(data = d,
+           regions = "counties", 
+           include = "California",
+           values = "Values") +
+  scale_fill_viridis_c() +
+  theme(legend.position = "right")
+
+
+```
+
+

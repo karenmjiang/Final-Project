@@ -114,8 +114,31 @@ county <-
     )
   ) %>%
   
+  mutate(
+    Values = as.numeric(Values)
+  ) %>%
+  
   # Re-order column names
   select(-Names)
+
+
+# Add FIPS codes to the counties
+fips <- read.csv("data/FIPS.csv") %>% 
+  
+  # Ensure that FIPS codes are legnth 5
+  mutate(FIPS = str_pad(FIPS, width = 5, pad = "0")) %>%
+  
+  # Match state abbreviation to state name
+  mutate(state_name = state.name[match(x = State, state.abb)]) %>%
+  
+  # Rename columns to match table to merge
+  rename("county_name" = Name,
+         "fips" = FIPS)
+
+# Merging FIPS to county data
+county <- county %>% 
+  left_join(fips, by = c("state_name", "county_name")) %>%
+  select(-state_id, -county_id)
 
 saveRDS(county, file = "clean_data/county.RDS")
 saveRDS(county, file = "about/data/county.RDS")
