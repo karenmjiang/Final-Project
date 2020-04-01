@@ -181,3 +181,39 @@ beneficiaries %>%
   length()
 ```
 
+```{r}
+
+library(stringr)
+
+county <-
+  
+  # Read in CSV data
+  read.csv("data/2018_County-level_FFS_Data_for_Shared_Savings_Program_Benchmark_PUF.csv") %>%
+  clean_names() %>%
+  pivot_longer(
+    cols = per_capita_esrd_expenditures:aged_non_dual_person_years,
+    names_to = "Names",
+    values_to = "Values"
+  ) %>%
+  mutate(
+    beneficiary = case_when(
+      str_detect(Names, "disabled") ~ "Disabled",
+      str_detect(Names, "esrd") ~ "End Stage Renal Disease",
+      str_detect(Names, "aged_dual") ~ "Aged Dual",
+      str_detect(Names, "aged_non_dual") ~ "Aged Non-Dual"
+    ),
+    category = case_when(
+      str_detect(Names, "per_capita") ~ "Per Capita Expenditures",
+      str_detect(Names, "risk_score") ~ "Average HCC Risk Score",
+      str_detect(Names, "person_years") ~ "Person Years"
+    )
+  ) %>%
+  select(-Names)
+      
+      
+
+head(county, 20)
+
+```
+
+
