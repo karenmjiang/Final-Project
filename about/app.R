@@ -2,6 +2,7 @@ library(shiny)
 library(ggplot2)
 library(readr)
 library(tidyverse)
+library(usmap)
 
 aco <- readRDS(file = "data/aco.RDS")
 county <- readRDS(file = "data/county.RDS")
@@ -9,42 +10,53 @@ county <- readRDS(file = "data/county.RDS")
 # Define UI for application that draws a histogram
 ui <- navbarPage(
     "Value Based Purchasing",
+
+# Data Exploration --------------------------------------------------------
+
     tabPanel("Data Exploration",
              fluidPage(
+                 
                  titlePanel("Accountable Care Organizations"),
+                 
                  sidebarLayout(
+                     
                      sidebarPanel(
-                         radioButtons(inputId = "agree_type",
-                                     label = "Agreement Type",
-                                     choices = unique(aco$Agree_Type),
-                                     selected = "Renewal"
-                            ),
                          
-                         selectInput(inputId = "initial_track", 
-                                     label = "Initial Track", 
-                                     choices = aco$initial,
-                                     multiple = TRUE),
+                         selectInput(inputId = "state",
+                                     label = "State",
+                                     choices = county$state_name), 
                          
-                         selectInput(inputId = "current_track", 
-                                     label = "Current Track", 
-                                     choices = aco$current,
-                                     multiple = TRUE,)
+                         selectInput(inputId = "beneficiary",
+                                     label = "Beneficiary Type",
+                                     choices = county$Beneficiary),
+                         
+                         selectInput(inputId = "category",
+                                     label = "Category", 
+                                     choices = county$Category)
                      ),
                      mainPanel(
-                         plotOutput("graph")
+                         plotOutput("state")
+                         
                      )
                  )
-             )),
+             )
+             ),
+
+# Discussion --------------------------------------------------------------
+
     
     tabPanel(
         "Discussion",
         titlePanel("Discussion Title"),
         p(
-            "Tour of the modeling choices you made and
-              an explanation of why you made them"
+            "What to say, what to say?"
         )
     ),
     
+
+# About -------------------------------------------------------------------
+
+
     tabPanel(
         "About",
         titlePanel("About"),
@@ -96,17 +108,32 @@ An ACO is a group of hospitals, physicians, other providers who come together vo
     )
 )
 
+
+# Server ------------------------------------------------------------------
+
+
 # Define server logic required to draw a histogram
 server <- function(input, output) {
-    output$graph <- renderPlot({
-        aco %>% 
-            filter(Agree_Type == input$agree_type) %>%
-        ggplot(aes(x = QualScore, fill = current)) + 
-            geom_density(alpha = 0.4) +
-            labs(x = "Quality Score", 
-                 y = "Density") +
-            theme_classic()
+    output$state <- renderPlot({
+        d <- county %>%
+            filter(Beneficiary == input$beneficiary,
+                   Category == input$category) 
+        
+        plot_usmap(data = d,
+                   regions = "counties",
+                   include = input$state,
+                   values = "Values",
+                   color = "white") +
+            scale_fill_continuous(low = "#DFF0EA", high = "#2A7886") +
+            theme(legend.position = "bottom",
+                  legend.direction = "horizontal") + 
+            labs(
+                title = paste(input$beneficiary, "Beneficiaries in ", input$state),
+                subtitle = paste("by ", input$category),
+                fill = paste("Count of ", input$category)
+            )
     })
+    
 }
 
 # Run the application

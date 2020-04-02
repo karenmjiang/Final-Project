@@ -31,13 +31,10 @@ aco <-
     Initial_Track_2,
     Initial_Track_3,
     N_AB,
-    N_AB_Year_PY,
-    N_AB_Year_ESRD_PY,
-    N_AB_Year_DIS_PY,
-    N_AB_Year_AGED_Dual_PY,
-    N_AB_Year_AGED_NonDual_PY,
     contains("N_Ben_"),
-    BnchmkMinExp,
+    Sav_rate, # Savings rate: (Benchmark Minus Expenditures) as a percent of Total Expenditures
+    BnchmkMinExp, # Benchmark minus Expenditures: If +, represents total savings. If -, represents total losses
+    GenSaveLoss, # Generated Total Savings and Losses: (Benchmark Minus Expenditures) for ACOs whose savings rate met or exceeded minimum savings rate. 0 otherwise 
     N_PCP,
     N_Spec,
     N_NP,
@@ -73,14 +70,77 @@ aco <-
     Initial_Start_Year = as.factor(format(Initial_Start_Date, "%Y"))
   ) %>%
   
-  # Calculating total providers
+  # Calculating total providers, and ratio of Assigned Beneficiaries to Providers
   mutate(
-    total_providers = N_PCP + N_Spec + N_NP + N_PA + N_CNS
-  )
+    N_total_providers = N_PCP + N_Spec + N_NP + N_PA + N_CNS,
+    ratio_AB_to_providers = N_AB/N_total_providers
+  ) %>%
+  
+  # Creating Categorical Variable for GenSaveLoss
+  mutate(GenSaveLoss_categorical = 
+           case_when(
+             GenSaveLoss > 0 ~ "Savings",
+             GenSaveLoss < 0 ~ "Losses",
+             GenSaveLoss == 0 ~ "No Savings/Losses"
+           )) %>%
+  
+  # Creating percentage values for PCPs and Specialists
+  mutate(perc_PCP = N_PCP/N_total_providers,
+         perc_Spec = N_Spec/N_total_providers) %>%
+  
+  # Calculate percentages of AB ages
+  mutate(perc_Age_0_64 = N_Ben_Age_0_64 / N_AB,
+         perc_Age_65_74 = N_Ben_Age_65_74 / N_AB,
+         perc_Age_75_84 = N_Ben_Age_75_84 / N_AB,
+         perc_Age_85plus = N_Ben_Age_85plus / N_AB)
+
 
 saveRDS(aco, file = "clean_data/aco.RDS")
 saveRDS(aco, file = "about/data/aco.RDS")
 
+
+
+# ACO Long ----------------------------------------------------------------
+
+
+aco_long <- aco %>%
+  pivot_longer(
+    cols = contains(c("N_", "perc_", "ratio_")),
+    names_to = "Names",
+    values_to = "Values",
+    names_prefix = "N_"
+  ) %>%
+  
+  mutate(
+    Category = case_when(
+      str_detect(Names, "perc_Age") ~ "Age (%)",
+      str_detect(Names, "Ben_Age") ~ "Age (n)",
+      str_detect(Names, "Race") ~ "Race",
+      str_detect(Names, "ale") ~ "Sex",
+      Names %in% c("PCP", "Spec", "NP", "PA", "CNS", "total_providers") ~ "Provider Type",
+      Names %in% c("perc_PCP", "perc_Spec") ~ "Provider (%)",
+      Names %in% c("AB", "ratio_AB_to_providers") ~ "Beneficiary"
+    )
+  ) %>%
+  
+  mutate(
+    Names = str_replace_all(Names, "_", " "),
+    Names = str_replace(Names, "Ben ", ""),
+    Names = str_replace(Names, "Age ", ""),
+    Names = str_replace(Names, "Race ", ""),
+    Names = str_replace(Names, "perc ", ""),
+    Names = str_replace(Names, "AB", "Assigned Beneficiaries"),
+    Names = str_replace(Names, "PCP", "Primary Care Physicians"),
+    Names = str_replace(Names, "Spec", "Specialists"),
+    Names = str_replace(Names, "NP", "Nurse Practitioners"),
+    Names = str_replace(Names, "PA", "Physician Assistants"),
+    Names = str_replace(Names, "CNS", "Clinical Nurse Specialists"),
+    Names = str_replace(Names, "providers", "Providers")
+  )
+
+
+saveRDS(aco_long, file = "clean_data/aco_long.RDS")
+saveRDS(aco_long, file = "about/data/aco_long.RDS")
 
 # County Dataset ----------------------------------------------------------
 

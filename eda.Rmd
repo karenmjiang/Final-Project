@@ -11,46 +11,92 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(ggplot2)
 library(usmap)
+library(wesanderson)
+
+options(scipen = 999)
 ```
 
 ```{r}
 aco <- readRDS("clean_data/aco.RDS")
+aco_long <- readRDS("clean_data/aco_long.RDS")
 county <- readRDS("clean_data/county.RDS")
 ```
 
 ```{r}
-head(aco)
 
-p <- aco %>%
-  ggplot(aes(x = N_AB, y = N_AB_Year_PY)) + 
-  geom_point(alpha = 0.4)
-
-p
-```
-
-
-```{r}
-length(unique(county$county_name))
-
-county %>%
-  filter(Beneficiary == "End Stage Renal Disease") %>%
-  filter(Category == "Person Years")
-```
-
-
-```{r}
 d <- county %>%
   filter(Beneficiary == "End Stage Renal Disease") %>%
   filter(Category == "Person Years")
 
 plot_usmap(data = d,
            regions = "counties", 
+           values = "Values",
+           color = "white",
+           size = 0.1) +
+  scale_fill_continuous(low = "#DFF0EA", high = "#2A7886") +
+    theme(legend.position = "bottom",
+          legend.direction = "horizontal") + 
+  labs(
+    fill = "Test"
+  )
+```
+
+```{r}
+
+plot_usmap(data = d,
+           regions = "counties", 
            include = "California",
-           values = "Values") +
-  scale_fill_viridis_c() +
-  theme(legend.position = "right")
+           values = "Values",
+           color = "white") +
+  scale_fill_continuous(low = "#DFF0EA", high = "#2A7886") +
+    theme(legend.position = "bottom",
+          legend.direction = "horizontal") + 
+  labs(
+    fill = "Test"
+  )
 
 
 ```
+
+Number of Beneficiaries against Number of Providers
+
+```{r}
+ggplot(aco, aes(x = N_AB, y = N_total_providers)) + geom_point(aes(color = current, size = num_states), alpha = 0.5) +
+  scale_x_log10() +
+  scale_y_log10() + 
+  theme_classic() +
+  labs(
+    x = "Number of Assigned Beneficiaries \n(Log 10)",
+    y = "Number of Total Providers \n(Log 10)"
+  )
+
+```
+```{r}
+aco %>% 
+  ggplot(aes(x=ratio_AB_to_providers)) +
+  geom_density(aes(fill = current), alpha = 0.4)
+
+```
+
+
+
+```{r}
+aco %>%
+  ggplot(aes(x=ratio_AB_to_providers)) +
+  geom_density(aes(fill = GenSaveLoss_categorical), alpha = 0.4)
+```
+
+
+
+```{r}
+aco_long %>%
+  filter(Category == "Age (%)",
+         Names == "85plus") %>%
+  ggplot(aes(x = Values, y = BnchmkMinExp)) +
+  geom_point(aes(color = GenSaveLoss_categorical), alpha = 0.3) +
+  theme_classic()
+```
+
+
 
 
