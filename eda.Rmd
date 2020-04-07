@@ -12,6 +12,7 @@ library(tidyverse)
 library(ggplot2)
 library(usmap)
 library(wesanderson)
+library(ggrepel)
 
 options(scipen = 999)
 ```
@@ -90,10 +91,30 @@ aco %>%
 
 ```{r}
 aco_long %>%
-  filter(Category == "Age (%)",
-         Names == "85plus") %>%
+  filter(Category == "Age (%)") %>%
   ggplot(aes(x = Values, y = BnchmkMinExp)) +
-  geom_point(aes(color = GenSaveLoss_categorical), alpha = 0.3) +
+  geom_point(aes(color = GenSaveLoss_categorical), alpha = 0.2) +
+  geom_hline(yintercept = 0) +
+  facet_grid(rows = 1, facets = ~ Names) +
+  theme_classic() +
+  xlim(0,1) + 
+  labs(
+    x = "Percent of Beneficiaries in Age category",
+    y = "Benchmark minus Expenditures",
+    color = "Generated: "
+  ) +
+  theme(
+    legend.position = "bottom",
+    legend.direction = "horizontal",
+    panel.spacing.x = unit(2, "line")
+  )
+```
+```{r}
+aco_long %>%
+  filter(Category == "Provider (%)") %>%
+  ggplot(aes(x = Values)) +
+  geom_density(aes(fill = GenSaveLoss_categorical), alpha = 0.4) +
+  facet_grid(rows = vars(Names)) +
   theme_classic()
 ```
 

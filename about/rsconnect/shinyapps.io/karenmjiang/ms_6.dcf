@@ -5,8 +5,8 @@ account: karenmjiang
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 2033393
-bundleId: 2956275
+bundleId: 2961490
 url: https://karenmjiang.shinyapps.io/ms_6/
-when: 1585780024.5794
+when: 1585862590.91276
 asMultiple: FALSE
 asStatic: FALSE

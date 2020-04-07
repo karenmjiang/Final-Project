@@ -1,4 +1,5 @@
 library(shiny)
+library(shinythemes)
 library(ggplot2)
 library(readr)
 library(tidyverse)
@@ -10,13 +11,54 @@ county <- readRDS(file = "data/county.RDS")
 # Define UI for application that draws a histogram
 ui <- navbarPage(
     "Value Based Purchasing",
+    
+    tabPanel(
+        "Intro",
+        titlePanel("What is an Accountable Care Organization?"),
+        
+        p(
+            "It might actually be more helpful to discuss what an ACO is NOT."
+        ),
+        
+        h3("Why ACOs?"),
+        
+        p("We know that there the US Healthcare system is encumbered by several market failures."),
+        p("Accountable Care Organizations were developed to"),
+        h3()
+    ),
+    
 
 # Data Exploration --------------------------------------------------------
 
     tabPanel("Data Exploration",
-             fluidPage(
+             fluidPage(theme = shinytheme("paper"),
                  
                  titlePanel("Accountable Care Organizations"),
+                 
+                 p(""),
+                 h3("What does the ACO landscape look like?"), 
+                 p("Let's start by look at ACOs nationwide by counties."),
+                
+                 
+                 sidebarLayout(
+                     sidebarPanel(
+                         
+                         selectInput(inputId = "beneficiary_2",
+                                     label = "Beneficiary Type",
+                                     choices = county$Beneficiary),
+                         
+                         selectInput(inputId = "category_2",
+                                     label = "Category", 
+                                     choices = county$Category),
+                     ),
+                     
+                     mainPanel(
+                         plotOutput("usa")
+                     )
+                 ),
+                 
+                 h3("ACOs by State"),
+                 p("Here, we can take a look state by state."),
                  
                  sidebarLayout(
                      
@@ -114,6 +156,22 @@ An ACO is a group of hospitals, physicians, other providers who come together vo
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
+    
+    output$usa <- renderPlot({
+        c <- county %>% 
+            filter(Beneficiary == input$beneficiary_2,
+                   Category == input$category_2)
+        
+        plot_usmap(data = c,
+                   regions = "counties",
+                   values = "Values",
+                   color = "white") +
+            scale_fill_continuous(low = "#DFF0EA", high = "#2A7886") +
+            theme(legend.position = "bottom",
+                  legend.direction = "horizontal")
+        
+    })
+    
     output$state <- renderPlot({
         d <- county %>%
             filter(Beneficiary == input$beneficiary,
@@ -132,7 +190,8 @@ server <- function(input, output) {
                 subtitle = paste("by ", input$category),
                 fill = paste("Count of ", input$category)
             )
-    })
+    },
+    )
     
 }
 
