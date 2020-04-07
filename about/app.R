@@ -12,21 +12,6 @@ county <- readRDS(file = "data/county.RDS")
 ui <- navbarPage(
     "Value Based Purchasing",
     
-    tabPanel(
-        "Intro",
-        titlePanel("What is an Accountable Care Organization?"),
-        
-        p(
-            "It might actually be more helpful to discuss what an ACO is NOT."
-        ),
-        
-        h3("Why ACOs?"),
-        
-        p("We know that there the US Healthcare system is encumbered by several market failures."),
-        p("Accountable Care Organizations were developed to"),
-        h3()
-    ),
-    
 
 # Data Exploration --------------------------------------------------------
 
