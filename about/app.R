@@ -10,9 +10,36 @@ county <- readRDS(file = "data/county.RDS")
 
 # Define UI for application that draws a histogram
 ui <- navbarPage(
-    "Value Based Purchasing",
-    
+    "2018 Accountable Care Organizations",
 
+# Intro -------------------------------------------------------------------
+
+    
+    tabPanel("Intro",
+        fluidRow(
+            column(2, ""),
+            column(8, 
+                   includeHTML("intro.html")
+                   ),
+            column(2, "")
+        )
+        
+    ),
+
+
+# Results -----------------------------------------------------------------
+
+    tabPanel("Results",
+        fluidRow(
+            column(2, ""),
+            column(8,
+                   includeHTML("results.html")
+                   ),
+            column(2, "")
+        )
+        
+    ),
+    
 # Data Exploration --------------------------------------------------------
 
     tabPanel("Data Exploration",
